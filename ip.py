@@ -208,6 +208,8 @@ def registerIPProtocol(callback,protocol):
             -protocol: valor del campo protocolo de IP para el cuál se quiere registrar una función de callback.
         Retorno: Ninguno 
     '''
+    
+    protocols[protocol] = callback
 
 def initIP(interface,opts=None):
     global myIP, MTU, netmask, defaultGW,ipOpts
@@ -228,6 +230,24 @@ def initIP(interface,opts=None):
             -opts: array de bytes con las opciones a nivel IP a incluir en los datagramas o None si no hay opciones a añadir
         Retorno: True o False en función de si se ha inicializado el nivel o no
     '''
+    
+    if initARP(interface) != 0:
+		logging.error("Error al inicializar ARP")
+		return False
+		
+	myIp = getIP(interface)
+	MTU = getMTU(interface)
+	netmask = getNetmask(interface)
+	defaultGW = getDefaultGW(interface)
+	ipOpts = opts
+	
+	registerEthCallback(process_IP_datagram, 0x0800)
+
+	IPID = 2
+	
+	return True
+	
+	
 
 def sendIPDatagram(dstIP,data,protocol):
     global IPID
