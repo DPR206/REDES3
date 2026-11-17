@@ -9,6 +9,7 @@ from ethernet import *
 from arp import *
 from fcntl import ioctl
 import subprocess
+import struct
 SIOCGIFMTU = 0x8921
 SIOCGIFNETMASK = 0x891b
 #Diccionario de protocolos. Las claves con los valores numéricos de protocolos de nivel superior a IP
@@ -93,38 +94,98 @@ def getDefaultGW(interface):
 
 
 def process_IP_datagram(us,header,data,srcMac):
-    '''
-        Nombre: process_IP_datagram
-        Descripción: Esta función procesa datagramas IP recibidos.
-            Se ejecuta una vez por cada trama Ethernet recibida con Ethertype 0x0800
-            Esta función debe realizar, al menos, las siguientes tareas:
-                -Extraer los campos de la cabecera IP (includa la longitud de la cabecera)
-                -Calcular el checksum y comprobar que es correcto                    
-                -Analizar los bits de de MF y el offset. Si el offset tiene un valor != 0 dejar de procesar el datagrama (no vamos a reensamblar)
-                -Loggear (usando logging.debug) el valor de los siguientes campos:
-                    -Longitud de la cabecera IP
-                    -IPID
-                    -TTL
-                    -Valor de las banderas DF y MF
-                    -Valor de offset
-                    -IP origen y destino
-                    -Protocolo
-                -Comprobar si tenemos registrada una función de callback de nivel superior consultando el diccionario protocols y usando como
-                clave el valor del campo protocolo del datagrama IP.
-                    -En caso de que haya una función de nivel superior registrada, debe llamarse a dicha funciñón 
-                    pasando los datos (payload) contenidos en el datagrama IP.
-        
-        Argumentos:
-            -us: Datos de usuario pasados desde la llamada de pcap_loop. En nuestro caso será None
-            -header: cabecera pcap_pktheader
-            -data: array de bytes con el contenido del datagrama IP
-            -srcMac: MAC origen de la trama Ethernet que se ha recibido
-        Retorno: Ninguno
-    '''
+	'''
+		Nombre: process_IP_datagram
+		Descripción: Esta función procesa datagramas IP recibidos.
+			Se ejecuta una vez por cada trama Ethernet recibida con Ethertype 0x0800
+			Esta función debe realizar, al menos, las siguientes tareas:
+				-Extraer los campos de la cabecera IP (includa la longitud de la cabecera)
+				-Calcular el checksum y comprobar que es correcto                    
+				-Analizar los bits de de MF y el offset. Si el offset tiene un valor != 0 dejar de procesar el datagrama (no vamos a reensamblar)
+				-Loggear (usando logging.debug) el valor de los siguientes campos:
+					-Longitud de la cabecera IP
+					-IPID
+					-TTL
+					-Valor de las banderas DF y MF
+					-Valor de offset
+					-IP origen y destino
+					-Protocolo
+				-Comprobar si tenemos registrada una función de callback de nivel superior consultando el diccionario protocols y usando como
+				clave el valor del campo protocolo del datagrama IP.
+					-En caso de que haya una función de nivel superior registrada, debe llamarse a dicha funciñón 
+					pasando los datos (payload) contenidos en el datagrama IP.
+		
+		Argumentos:
+			-us: Datos de usuario pasados desde la llamada de pcap_loop. En nuestro caso será None
+			-header: cabecera pcap_pktheader
+			-data: array de bytes con el contenido del datagrama IP
+			-srcMac: MAC origen de la trama Ethernet que se ha recibido
+		Retorno: Ninguno
+	'''
+	
+	#Extraer los campos de la cabecera IP
+	header_ip = data[0:20] #los primeros 20 bytes son de cabecera IP
+	
+	# Formato: 	
+	# B (1 byte: Version + IHL)
+	# B (1 byte: ToS)
+	# H (2 bytes: Total Length)
+	# H (2 bytes: Identification / IPID)
+	# H (2 bytes: Flags + Offset)
+	# B (1 byte: TTL)
+	# B (1 byte: Protocol)
+	# H (2 bytes: Checksum)
+	# 4s (4 bytes: IP Origen)
+	# 4s (4 bytes: IP Destino)
+	
+	version_ihl, tos, total_length, ipid, flags_offset, ttl, protoc, checksum, src_ip, dst_ip = struct.unpack('!BBHHHBBH4s4s', header_ip)
 
-
-
-
+	version = version_ihl >> 4 #desplazamiento a la derecha de 4 bytes
+	ihl = version_ihl & 0x0F # mascara para obtener los 4 bits inferiores
+	
+	flags = flags_offset >> 13 #desplazamiento a la derecha de 13 bits
+	df = (flags & 0x2) >> 1 #deberia ser 0
+	mf = flags & 0x1
+	offset = flags_offset & 0x1FFF #obtener los 13 bits inferiores
+	
+	# Calcular tamaño de cabecera en bytes
+	header_len = ihl * 4
+	
+	# Comprobar tamaño de la cabecera
+	if header_len < IP_MIN_HLEN or header_len > IP_MAX_HLEN or header_len > len(data):
+		logging.error("Cabecera IP con tamaño inválido: %d bytes", header_len)
+		return
+	
+	header_ip = data[:header_len]
+	
+	#Calcular checksum y comprobar que es correcto
+	if chksum(header_ip)!=0:
+		logging.error("Checksum IP incorrecto. Paquete descartado.")
+		return
+		
+	#Analizar los bits de de MF y el offset
+	if offset != 0:
+		logging.error("Error en offset de datagrama IP")
+		return
+	
+	#Loggear
+	logging.debug("--- PROCESANDO DATAGRAMA IP ---")
+	logging.debug("Longitud cabecera IP: %d", header_len)
+	logging.debug("IPID: %d", ipid)
+	logging.debug("TTL: %d", ttl)
+	logging.debug("Banderas - DF: %d, MF: %d", df, mf)
+	logging.debug("Offset: %d", offset)
+	logging.debug("IP Origen: %s, IP Destino: %s", src_ip, dst_ip)
+	logging.debug("Protocolo: %d", protoc)
+	
+	#Comprobar función callback
+	if protoc in protocols:
+		payload = data[header_len:]
+		protocols[protoc](payload)
+	else:
+		logging.debug("No hay función de callback registrada para el protocolo %d", protoc)
+	
+	
 
 def registerIPProtocol(callback,protocol):
     '''
