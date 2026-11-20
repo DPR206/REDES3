@@ -158,10 +158,22 @@ def process_IP_datagram(us,header,data,srcMac):
 	
 	header_ip = data[:header_len]
 	
-	#Calcular checksum y comprobar que es correcto
+	#Calcular checksum y comprobar que es correcto (a lo mejor habría que hacer de manera distinta)
 	if chksum(header_ip)!=0:
 		logging.error("Checksum IP incorrecto. Paquete descartado.")
 		return
+	
+	'''
+	Método B (El que tú propones):
+
+	Extraer el valor del checksum que viene dentro de la cabecera.
+
+	Poner esos 2 bytes del checksum a 0 en una copia o en los bytes de la cabecera.
+
+	Calcular el checksum con tu función chksum() sobre esa cabecera modificada.
+
+	Comparar el valor devuelto con el checksum original que guardaste en el paso 1. Si coinciden, el paquete es correcto.
+	'''
 		
 	#Analizar los bits de de MF y el offset
 	if offset != 0:
@@ -212,7 +224,7 @@ def registerIPProtocol(callback,protocol):
     protocols[protocol] = callback
 
 def initIP(interface,opts=None):
-    global myIP, MTU, netmask, defaultGW,ipOpts
+    global myIP, MTU, netmask, defaultGW,ipOpts, IPID
     '''
         Nombre: initIP
         Descripción: Esta función inicializará el nivel IP. Esta función debe realizar, al menos, las siguientes tareas:
@@ -250,7 +262,7 @@ def initIP(interface,opts=None):
 	
 
 def sendIPDatagram(dstIP,data,protocol):
-    global IPID
+    global IPID, myIP, MTU, netmask, defaultGW,ipOpts
     '''
         Nombre: sendIPDatagram
         Descripción: Esta función construye un datagrama IP y lo envía. En caso de que los datos a enviar sean muy grandes la función
@@ -263,7 +275,7 @@ def sendIPDatagram(dstIP,data,protocol):
                 -Añadir los datos a la cabecera IP
                 -En el caso de que sea un fragmento ajustar los valores de los campos MF y offset de manera adecuada
                 -Enviar el datagrama o fragmento llamando a sendEthernetFrame. Para determinar la dirección MAC de destino
-                al enviar los datagramas se debe hacer unso de la máscara de red:                  
+                al enviar los datagramas se debe hacer uso de la máscara de red.                  
             -Para cada datagrama (no fragmento):
                 -Incrementar la variable IPID en 1.
         Argumentos:
@@ -275,6 +287,43 @@ def sendIPDatagram(dstIP,data,protocol):
           
     '''
     ip_header = bytes()
-
-
-
+    
+    #Calcular el tamaño de la cabecera
+    
+    header_len = IP_MIN_HLEN
+    
+    if ipOpts is not None:
+		header_len += len(ipOpts)
+		
+	#Calcular el tamaño máximo de datos por fragmento (payload)). Debe ser múltiplo de 8.
+	max_data_len = ((MTU-header_len) // 8) * 8
+	
+	if len(data) <= max_data_len:
+		fragments = [data]
+	else:
+		fragments = [data[i : i + max_data_len] 
+			for i in range(0, len(data), max_data_len)]
+			
+	#Iterar en base a los fragmentos creados
+	total_fragments = len(fragments)
+	
+	for ind, frag_data in enumerate(fragments):
+		
+		#Calcular los campos específicos en palabras de 8 bytes
+		offset = (ind * max_data_len) // 8
+		
+		#Bandera MF y DF
+		mf = 1 if ind < (total_fragments - 1) else 0
+		df = 0 #según indiicaciones del enunciado
+		
+		#Construimos flags + offset
+		flags_offset = (df << 14) | (mf << 13) | (offset & 0x1FFF) 
+		
+		total_length = header_len + len(frag_data)
+		
+		version = 4
+		ihl = header_len // 4
+		version_ihl = (version << 4) | ihl
+		tos = 1
+		
+		
