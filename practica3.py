@@ -2,7 +2,7 @@
     practica3.py
     Envía datagramas UDP o ICMP sobre protocolo IP. 
 
-    Autor: Javier Ramos <javier.ramos@uam.es>
+    Autor: Duna Puente <duna.puente@estudiante.uam.es>
     2022 EPS-UAM
 '''
 
@@ -22,8 +22,8 @@ import socket
 DST_PORT = 53
 ICMP_ECHO_REQUEST_TYPE = 8
 ICMP_ECHO_REQUEST_CODE = 0
-# TODO: Cambiar ICMP_ID según enunciado
-ICMP_ID = 0
+# ICMP_ID = Número de la pareja
+ICMP_ID = 2
 
 ipRROption = bytes([7,11,4,0,0,0,0,0,0,0,0,0])
 
@@ -36,7 +36,8 @@ if __name__ == "__main__":
 	parser.add_argument('--debug', dest='debug', default=False, action='store_true',help='Activar Debug messages')
 	parser.add_argument('--addOptions', dest='addOptions', default=False, action='store_true',help='Añadir opciones a los datagranas IP')
 	parser.add_argument('--dataFile',dest='dataFile',default = False,help='Fichero con datos a enviar')
-	#TODO: Opción --icmpsize
+	#Opción --icmpsize
+	parser.add_argument('--icmpsize', dest='icmpsize', default = False, help='Tamaño en bytes de los paquetes ICMP request')
 	args = parser.parse_args()
 
 	if args.debug:
@@ -53,6 +54,11 @@ if __name__ == "__main__":
 		logging.error('No se ha especificado dirección IP')
 		parser.print_help()
 		sys.exit(-1)
+		
+	if args.icmpsize is False:
+		logging.error('No se ha especificado el tamaño de los paquetes ICMP request')
+		parser.print_help()
+		sys.exit(-1)
 
 	ipOpts = None
 	if args.addOptions:
@@ -66,8 +72,14 @@ if __name__ == "__main__":
 			#Pasamos los datos de cadena a bytes
 			udp_data = data.encode()
 	
-	icmp_data = b'ABCDEFGHIJKL'
-	#TODO: construir mensaje ICMP según opción --icmpsize
+	#Construir mensaje ICMP según opción --icmpsize
+	
+	#Convertir argumento a entero
+	icmp_size = int(args.icmpsize)
+	
+	#Lista de bytes de la A (ASCII - 65) a la Z (ASCII - 90) cíclica
+	icmp_data = bytes([(65 + (i%26)) for i in range (icmp_size)])
+	
 	
 	startEthernetLevel(args.interface)
 	initICMP()
