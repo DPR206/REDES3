@@ -1,5 +1,5 @@
 '''
-    icmp.py
+    udp.py
     
     Funciones necesarias para implementar el nivel UDP
     Autor: Javier Ramos <javier.ramos@uam.es>
@@ -42,11 +42,23 @@ def process_UDP_datagram(us,header,data,srcIP):
         Argumentos:
             -us: son los datos de usuarios pasados por pcap_loop (en nuestro caso este valor será siempre None)
             -header: estructura pcap_pkthdr que contiene los campos len, caplen y ts.
-            -data: array de bytes con el conenido del datagrama UDP
+            -data: array de bytes con el contenido del datagrama UDP
             -srcIP: dirección IP que ha enviado el datagrama actual.
         Retorno: Ninguno
           
     '''
+    if len(data) < UDP_HLEN:
+        logging.error('Datagrama UDP demasiado corto')
+        return
+
+    # Extraer cabecera UDP
+    srcPort, dstPort, length, checksum = struct.unpack('!HHHH', data[:UDP_HLEN])
+    payload = data[UDP_HLEN:]
+
+    #Loggear campos
+    logging.debug('Puerto origen: ' + str(srcPort))
+    logging.debug('Puerto destino: ' + str(dstPort))
+    logging.debug('Datos: ' + str(payload))
 
 
 def sendUDPDatagram(data,dstPort,dstIP):
@@ -67,7 +79,23 @@ def sendUDPDatagram(data,dstPort,dstIP):
         Retorno: True o False en función de si se ha enviado el datagrama correctamente o no
           
     '''
+
+    length = UDP_HLEN + len(data)
+    if length > 0xFFFF:
+        logging.error('Datagrama UDP demasiado grande')
+        return False
+
+    srcPort = getUDPSourcePort()
+
+    #Construir cabecera UDP
     udp_datagram = bytes()
+    udp_datagram += struct.pack('!HHHH', srcPort, dstPort, length, 0)
+
+    #Añadir los datos
+    udp_datagram += data
+
+    #Enviar el datagrama resultante
+    return sendIPDatagram(dstIP, udp_datagram, UDP_PROTO)
 
 
 def initUDP():
@@ -82,3 +110,4 @@ def initUDP():
         Retorno: Ninguno
           
     '''
+    registerIPProtocol(process_UDP_datagram, UDP_PROTO)
