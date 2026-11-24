@@ -130,7 +130,7 @@ def sendICMPMessage(data,type,code,icmp_id,icmp_seqnum,dstIP):
         with timeLock:
             icmp_send_times[dstIP + icmp_id + icmp_seqnum] = time.time()
 
-    print('Tamaño icmp_message: ' + str(len(icmp_message)))
+    
     #Enviar el mensaje ICMP
     return sendIPDatagram(dstIP, icmp_message, ICMP_PROTO)
    

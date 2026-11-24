@@ -84,7 +84,6 @@ def sendUDPDatagram(data,dstPort,dstIP):
     if length > 0xFFFF:
         logging.error('Datagrama UDP demasiado grande')
         return False
-    print('Length: ' + str(length))
 
     srcPort = getUDPSourcePort()
 
