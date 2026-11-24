@@ -314,6 +314,7 @@ def initARP(interface:str) -> int:
 		print("Conflicto con IP, no se ha podido inicializar")
 		arpInitialized = False
 		return -1
+	print("No se ha detectado conflicto con IP")
 	
 	#Marcar la variable como True
 	arpInitialized = True

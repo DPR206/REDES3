@@ -92,7 +92,7 @@ def getDefaultGW(interface):
 	'''
 	p = subprocess.Popen(['ip r | grep default | awk \'{print $3}\''], stdout=subprocess.PIPE, shell=True)
 	dfw = p.stdout.read().decode('utf-8')
-	print(dfw)
+	#print(dfw)
 	return struct.unpack('!I',socket.inet_aton(dfw))[0]
 
 
@@ -108,6 +108,7 @@ def process_IP_datagram(us,header,data,srcMac):
 				-Analizar los bits de de MF y el offset. Si el offset tiene un valor != 0 dejar de procesar el datagrama (no vamos a reensamblar)
 				-Loggear (usando logging.debug) el valor de los siguientes campos:
 					-Longitud de la cabecera IP
+					-ToS
 					-IPID
 					-TTL
 					-Valor de las banderas DF y MF
@@ -162,25 +163,26 @@ def process_IP_datagram(us,header,data,srcMac):
 	
 	header_ip = data[:header_len]
 	
-	#Calcular checksum y comprobar que es correcto (a lo mejor habría que hacer de manera distinta)
+	#Calcular checksum y comprobar que es correcto
 	if chksum(header_ip)!=0:
 		logging.error("Checksum IP incorrecto. Paquete descartado.")
-		return
-		
-	#Analizar los bits de de MF y el offset
-	if offset != 0:
-		logging.error("Error en offset de datagrama IP")
 		return
 	
 	#Loggear
 	logging.debug("--- PROCESANDO DATAGRAMA IP ---")
 	logging.debug("Longitud cabecera IP: %d", header_len)
+	logging.debug("ToS: %d", tos)
 	logging.debug("IPID: %d", ipid)
 	logging.debug("TTL: %d", ttl)
 	logging.debug("Banderas - DF: %d, MF: %d", df, mf)
 	logging.debug("Offset: %d", offset)
 	logging.debug("IP Origen: %s, IP Destino: %s", '.'.join(['{}'.format(x) for x in struct.pack('!I', src_ip)]), '.'.join(['{}'.format(x) for x in struct.pack('!I', dst_ip)]))
 	logging.debug("Protocolo: %d", protoc)
+
+	#Analizar los bits de de MF y el offset
+	if offset != 0:
+		logging.error("Offset diferente de 0, este fragmento no se continuará analizando")
+		return
 	
 	#Comprobar función callback
 	if protoc in protocols:
@@ -238,7 +240,7 @@ def initIP(interface,opts=None):
 	if initARP(interface) != 0:
 		logging.error("Error al inicializar ARP")
 		return False
-		
+	
 	myIP = getIP(interface)
 	MTU = getMTU(interface)
 	netmask = getNetmask(interface)
@@ -246,7 +248,7 @@ def initIP(interface,opts=None):
 	ipOpts = opts
 	
 	registerEthCallback(process_IP_datagram, 0x0800)
-
+	
 	IPID = 2
 	
 	return True

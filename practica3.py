@@ -68,14 +68,12 @@ if __name__ == "__main__":
 			udp_data = data.encode()
 
 	#Construir mensaje ICMP según opción --icmpsize
-	icmp_data = udp_data
-	if args.icmpsize is True:
+	icmp_data = bytes()
+	if args.icmpsize is not False:
 		#Convertir argumento a entero
 		icmp_size = int(args.icmpsize)
-			
 		#Lista de bytes de la A (ASCII - 65) a la Z (ASCII - 90) cíclica
 		icmp_data = bytes([(65 + (i%26)) for i in range (icmp_size)])
-	
 	
 	startEthernetLevel(args.interface)
 	initICMP()

@@ -71,7 +71,7 @@ def process_ICMP_message(us,header,data,srcIp):
     elif icmp_type == ICMP_ECHO_REPLY_TYPE:
         #Calcular el RTT si es echo_reply
         with timeLock:
-            sendTime = icmp_send_times.pop(srcIp + icmp_id + icmp_seqnum, None)
+            sendTime = icmp_send_times[srcIp + icmp_id + icmp_seqnum]
         if sendTime is None:
             return
         recTime = header.ts.tv_sec + header.ts.tv_usec / 1e6
@@ -130,6 +130,7 @@ def sendICMPMessage(data,type,code,icmp_id,icmp_seqnum,dstIP):
         with timeLock:
             icmp_send_times[dstIP + icmp_id + icmp_seqnum] = time.time()
 
+    print('Tamaño icmp_message: ' + str(len(icmp_message)))
     #Enviar el mensaje ICMP
     return sendIPDatagram(dstIP, icmp_message, ICMP_PROTO)
    
