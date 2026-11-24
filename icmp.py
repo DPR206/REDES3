@@ -63,7 +63,7 @@ def process_ICMP_message(us,header,data,srcIp):
 
     #Loggear tipo y código
     logging.debug('Tipo ICMP: ' + str(icmp_type))
-    logging.debug('Código ICMP: ' + str(icmp_code))
+    logging.debug('Código ICMP: ' + str(icmp_code) + '\n')
 
     if icmp_type == ICMP_ECHO_REQUEST_TYPE:
         #Responder si es echo_request
@@ -71,11 +71,11 @@ def process_ICMP_message(us,header,data,srcIp):
     elif icmp_type == ICMP_ECHO_REPLY_TYPE:
         #Calcular el RTT si es echo_reply
         with timeLock:
-            sendTime = icmp_send_times.pop(srcIp + icmp_id + icmp_seqnum)
+            sendTime = icmp_send_times.pop(srcIp + icmp_id + icmp_seqnum, None)
         if sendTime is None:
             return
         recTime = header.ts.tv_sec + header.ts.tv_usec / 1e6
-        print('RTT: ' + str(recTime - sendTime) + ' segundos')
+        print('\nRTT: ' + str(recTime - sendTime) + ' segundos\n')
 
 def sendICMPMessage(data,type,code,icmp_id,icmp_seqnum,dstIP):
     '''
@@ -122,7 +122,8 @@ def sendICMPMessage(data,type,code,icmp_id,icmp_seqnum,dstIP):
         checksum = chksum(icmp_message + bytes([0]))
     else:
         checksum = chksum(icmp_message)
-    icmp_message = icmp_message[:2] + struct.pack('!H', checksum) + icmp_message[4:]
+
+    icmp_message = icmp_message[:2] + struct.pack('<H', checksum) + icmp_message[4:]
 
     #Guardar tiempo de envío si type es ICMP_ECHO_REQUEST_TYPE
     if type == ICMP_ECHO_REQUEST_TYPE:

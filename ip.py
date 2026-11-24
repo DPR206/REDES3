@@ -139,10 +139,10 @@ def process_IP_datagram(us,header,data,srcMac):
 	# B (1 byte: TTL)
 	# B (1 byte: Protocol)
 	# H (2 bytes: Checksum)
-	# 4s (4 bytes: IP Origen)
-	# 4s (4 bytes: IP Destino)
+	# I (4 bytes: IP Origen)
+	# I (4 bytes: IP Destino)
 	
-	version_ihl, tos, total_length, ipid, flags_offset, ttl, protoc, checksum, src_ip, dst_ip = struct.unpack('!BBHHHBBH4s4s', header_ip)
+	version_ihl, tos, total_length, ipid, flags_offset, ttl, protoc, checksum, src_ip, dst_ip = struct.unpack('!BBHHHBBHII', header_ip)
 
 	version = version_ihl >> 4 #desplazamiento a la derecha de 4 bytes
 	ihl = version_ihl & 0x0F # mascara para obtener los 4 bits inferiores
@@ -156,7 +156,7 @@ def process_IP_datagram(us,header,data,srcMac):
 	header_len = ihl * 4
 	
 	# Comprobar tamaño de la cabecera
-	if header_len < IP_MIN_HLEN or header_len > IP_MAX_HLEN or header_len > len(data):
+	if header_len < IP_MIN_HLEN or header_len > IP_MAX_HLEN:
 		logging.error("Cabecera IP con tamaño inválido: %d bytes", header_len)
 		return
 	
@@ -166,18 +166,6 @@ def process_IP_datagram(us,header,data,srcMac):
 	if chksum(header_ip)!=0:
 		logging.error("Checksum IP incorrecto. Paquete descartado.")
 		return
-	
-	'''
-	Método B (El que tú propones):
-
-	Extraer el valor del checksum que viene dentro de la cabecera.
-
-	Poner esos 2 bytes del checksum a 0 en una copia o en los bytes de la cabecera.
-
-	Calcular el checksum con tu función chksum() sobre esa cabecera modificada.
-
-	Comparar el valor devuelto con el checksum original que guardaste en el paso 1. Si coinciden, el paquete es correcto.
-	'''
 		
 	#Analizar los bits de de MF y el offset
 	if offset != 0:
@@ -191,13 +179,13 @@ def process_IP_datagram(us,header,data,srcMac):
 	logging.debug("TTL: %d", ttl)
 	logging.debug("Banderas - DF: %d, MF: %d", df, mf)
 	logging.debug("Offset: %d", offset)
-	logging.debug("IP Origen: %s, IP Destino: %s", src_ip, dst_ip)
+	logging.debug("IP Origen: %s, IP Destino: %s", '.'.join(['{}'.format(x) for x in struct.pack('!I', src_ip)]), '.'.join(['{}'.format(x) for x in struct.pack('!I', dst_ip)]))
 	logging.debug("Protocolo: %d", protoc)
 	
 	#Comprobar función callback
 	if protoc in protocols:
 		payload = data[header_len:]
-		protocols[protoc](payload)
+		protocols[protoc](us, header, payload, src_ip)
 	else:
 		logging.debug("No hay función de callback registrada para el protocolo %d", protoc)
 	
@@ -293,7 +281,6 @@ def sendIPDatagram(dstIP,data,protocol):
 	ip_header = bytes()
 	
 	#Calcular el tamaño de la cabecera
-	
 	header_len = IP_MIN_HLEN
 	
 	if ipOpts is not None:
@@ -352,19 +339,7 @@ def sendIPDatagram(dstIP,data,protocol):
 		ip_checksum = chksum(ip_header_no_checksum)
 		
 		#Empaquetar cabecera con el checksum calculado
-		ip_header = struct.pack(
-			'!BBHHHBBHII',
-			version_ihl,
-			tos,
-			total_length,
-			IPID,
-			flags_offset,
-			ttl,
-			protocol,
-			ip_checksum,
-			myIP,
-			dstIP
-		)
+		ip_header = ip_header_no_checksum[:10] + struct.pack('<H', ip_checksum) + ip_header_no_checksum[12:]
 		
 		if ipOpts is not None:
 			ip_header += ipOpts

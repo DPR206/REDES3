@@ -54,11 +54,6 @@ if __name__ == "__main__":
 		logging.error('No se ha especificado dirección IP')
 		parser.print_help()
 		sys.exit(-1)
-		
-	if args.icmpsize is False:
-		logging.error('No se ha especificado el tamaño de los paquetes ICMP request')
-		parser.print_help()
-		sys.exit(-1)
 
 	ipOpts = None
 	if args.addOptions:
@@ -71,14 +66,15 @@ if __name__ == "__main__":
 			data=f.read()
 			#Pasamos los datos de cadena a bytes
 			udp_data = data.encode()
-	
+
 	#Construir mensaje ICMP según opción --icmpsize
-	
-	#Convertir argumento a entero
-	icmp_size = int(args.icmpsize)
-	
-	#Lista de bytes de la A (ASCII - 65) a la Z (ASCII - 90) cíclica
-	icmp_data = bytes([(65 + (i%26)) for i in range (icmp_size)])
+	icmp_data = udp_data
+	if args.icmpsize is True:
+		#Convertir argumento a entero
+		icmp_size = int(args.icmpsize)
+			
+		#Lista de bytes de la A (ASCII - 65) a la Z (ASCII - 90) cíclica
+		icmp_data = bytes([(65 + (i%26)) for i in range (icmp_size)])
 	
 	
 	startEthernetLevel(args.interface)
@@ -87,9 +83,6 @@ if __name__ == "__main__":
 	if initIP(args.interface,ipOpts) == False:
 		logging.error('Inicializando nivel IP')
 		sys.exit(-1)
-
-	
-	
 	
 	while True:
 		try:

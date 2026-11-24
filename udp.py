@@ -58,7 +58,7 @@ def process_UDP_datagram(us,header,data,srcIP):
     #Loggear campos
     logging.debug('Puerto origen: ' + str(srcPort))
     logging.debug('Puerto destino: ' + str(dstPort))
-    logging.debug('Datos: ' + str(payload))
+    logging.debug('Datos: ' + str(payload) + '\n')
 
 
 def sendUDPDatagram(data,dstPort,dstIP):
