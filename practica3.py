@@ -54,6 +54,11 @@ if __name__ == "__main__":
 		logging.error('No se ha especificado dirección IP')
 		parser.print_help()
 		sys.exit(-1)
+		
+	if args.icmpsize is not None and args.icmpsize <= 0:
+		logging.error('El valor de icmpsize deber ser positivo')
+		parser.print_help()
+		sys.exit(-1)
 
 	ipOpts = None
 	if args.addOptions:
@@ -69,7 +74,7 @@ if __name__ == "__main__":
 
 	#Construir mensaje ICMP según opción --icmpsize
 	icmp_data = bytes()
-	if args.icmpsize is not False:
+	if args.icmpsize is not None:
 		#Convertir argumento a entero
 		icmp_size = int(args.icmpsize)
 		#Lista de bytes de la A (ASCII - 65) a la Z (ASCII - 90) cíclica

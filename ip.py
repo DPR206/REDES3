@@ -23,6 +23,12 @@ IP_MIN_HLEN = 20
 IP_MAX_HLEN = 60
 #Ethertype para IP
 ETHTYPE_IP = 0x0800
+#Valores por defecto
+DF = 0
+IP_VERSION = 4 
+TOS = 1
+TTL = 40
+
 def chksum(msg):
 	'''
 		Nombre: chksum
@@ -247,7 +253,7 @@ def initIP(interface,opts=None):
 	defaultGW = getDefaultGW(interface)
 	ipOpts = opts
 	
-	registerEthCallback(process_IP_datagram, 0x0800)
+	registerEthCallback(process_IP_datagram, ETHTYPE_IP)
 	
 	IPID = 2
 	
@@ -307,18 +313,18 @@ def sendIPDatagram(dstIP,data,protocol):
 		
 		#Bandera MF y DF
 		mf = 1 if ind < (total_fragments - 1) else 0
-		df = 0 #según indiicaciones del enunciado
+		df = DF
 		
 		#Construimos flags + offset
 		flags_offset = (df << 14) | (mf << 13) | (offset & 0x1FFF) 
 		
 		total_length = header_len + len(frag_data)
 		
-		version = 4 #valor por defecto
+		version = IP_VERSION
 		ihl = header_len // 4
 		version_ihl = (version << 4) | ihl
-		tos = 1 #valor por defecto
-		ttl = 40 #valor por defecto
+		tos = TOS
+		ttl = TTL
 		
 		#Empaquetar cabecera con checksum a 0 (hay que calcularlo)
 		ip_header_no_checksum = struct.pack(
