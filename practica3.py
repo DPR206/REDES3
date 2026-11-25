@@ -55,7 +55,7 @@ if __name__ == "__main__":
 		parser.print_help()
 		sys.exit(-1)
 		
-	if args.icmpsize is not None and args.icmpsize <= 0:
+	if args.icmpsize is not False and int(args.icmpsize) <= 0:
 		logging.error('El valor de icmpsize deber ser positivo')
 		parser.print_help()
 		sys.exit(-1)
