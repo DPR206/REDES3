@@ -349,9 +349,6 @@ def sendIPDatagram(dstIP,data,protocol):
 		#Empaquetar cabecera con el checksum calculado
 		ip_header = ip_header_no_checksum[:10] + struct.pack('<H', ip_checksum) + ip_header_no_checksum[12:]
 		
-		if ipOpts is not None:
-			ip_header += ipOpts
-		
 		#Unimos cabecera IP y los datos
 		final_packet = ip_header + frag_data
 		
