@@ -37,7 +37,7 @@ if __name__ == "__main__":
 	parser.add_argument('--addOptions', dest='addOptions', default=False, action='store_true',help='Añadir opciones a los datagranas IP')
 	parser.add_argument('--dataFile',dest='dataFile',default = False,help='Fichero con datos a enviar')
 	#Opción --icmpsize
-	parser.add_argument('--icmpsize', dest='icmpsize', default = False, help='Tamaño en bytes de los paquetes ICMP request')
+	parser.add_argument('--icmpsize', dest='icmpsize', default = None, help='Tamaño en bytes de los paquetes ICMP request')
 	args = parser.parse_args()
 
 	if args.debug:
@@ -55,7 +55,7 @@ if __name__ == "__main__":
 		parser.print_help()
 		sys.exit(-1)
 		
-	if args.icmpsize is not False and int(args.icmpsize) <= 0:
+	if args.icmpsize is not None and int(args.icmpsize) <= 0:
 		logging.error('El valor de icmpsize deber ser positivo')
 		parser.print_help()
 		sys.exit(-1)

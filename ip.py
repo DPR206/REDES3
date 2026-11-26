@@ -181,7 +181,7 @@ def process_IP_datagram(us,header,data,srcMac):
 	logging.debug("IPID: %d", ipid)
 	logging.debug("TTL: %d", ttl)
 	logging.debug("Banderas - DF: %d, MF: %d", df, mf)
-	logging.debug("Offset: %d", offset)
+	logging.debug("Offset: %d", offset * 8)
 	logging.debug("IP Origen: %s, IP Destino: %s", '.'.join(['{}'.format(x) for x in struct.pack('!I', src_ip)]), '.'.join(['{}'.format(x) for x in struct.pack('!I', dst_ip)]))
 	logging.debug("Protocolo: %d", protoc)
 
